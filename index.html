@@ -1,0 +1,30 @@
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Login test</title>
+  <script src="public/login.js"></script>
+</head>
+
+<body>
+  <div id="login"></div>
+  <div id="main"></div>
+  <script>
+    const API_BASE_URL = "http://localhost:3000/";
+    var login = Elm.Login.init({
+      node: document.getElementById('login'),
+      flags: API_BASE_URL    
+    });
+
+
+    login.ports.fetchAuthToken.subscribe(function (_) {
+      login.ports.authTokenReceiver.send(localStorage.getItem('auth_token'));
+    });
+
+    login.ports.setAuthTokenCookie.subscribe(function (token) {
+      localStorage.setItem('auth_token', token)
+      document.getElementById("main").innerHTML = "Successfully logged in!"
+    });
+
+  </script>
+</body>
+</html>

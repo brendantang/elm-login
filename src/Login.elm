@@ -3,7 +3,7 @@ port module Login exposing (..)
 import Browser
 import Html exposing (..)
 import Html.Attributes exposing (..)
-import Html.Events exposing (onInput)
+import Html.Events exposing (onClick, onInput)
 import Http
 import Json.Decode as JD
 import Json.Encode as JE
@@ -13,6 +13,7 @@ import Json.Encode as JE
 -- MAIN
 
 
+main : Program String Model Msg
 main =
     Browser.element
         { init = init
@@ -97,7 +98,7 @@ update msg model =
         GotAuthFromServer result ->
             case result of
                 Ok token ->
-                    ( { model | status = LoggedIn token }, setAuthTokenCookie (Api.tokenToString token) )
+                    ( { model | status = LoggedIn token }, setAuthTokenCookie (tokenToString token) )
 
                 Err e ->
                     case e of
@@ -105,12 +106,12 @@ update msg model =
                             ( { model | status = Failure }, Cmd.none )
 
                         _ ->
-                            ( { model | status = Problem (StringUtil.prettyHttpError e) }, Cmd.none )
+                            ( { model | status = Problem (prettyHttpError e) }, Cmd.none )
 
         GotAuthFromCookie maybeTokenString ->
             case maybeTokenString of
                 Just token ->
-                    ( { model | status = LoggedIn (Api.TokenString token) }, setAuthTokenCookie token )
+                    ( { model | status = LoggedIn (TokenString token) }, setAuthTokenCookie token )
 
                 Nothing ->
                     ( { model | status = Ready }, Cmd.none )
@@ -127,7 +128,7 @@ view model =
             text ""
 
         _ ->
-            UI.wrapper
+            div []
                 [ viewStatus model.status
                 , viewSignInForm model
                 ]
@@ -135,7 +136,7 @@ view model =
 
 viewSignInForm : Model -> Html Msg
 viewSignInForm model =
-    div [ css [ displayFlex, flexDirection column ] ]
+    div []
         [ viewInput "text" "Email" model.email Email
         , viewInput "password" "Password" model.password Password
         , viewSignInButton model.status
@@ -146,10 +147,10 @@ viewSignInButton : Status -> Html Msg
 viewSignInButton status =
     case status of
         Ready ->
-            UI.blueButton [] SignIn "Sign in"
+            button [ onClick SignIn ] [ text "Sign in" ]
 
         _ ->
-            UI.disabledButton [] "Sign in"
+            button [ disabled True ] [ text "Sign in" ]
 
 
 viewStatus : Status -> Html Msg
@@ -173,7 +174,7 @@ viewStatus status =
 
 viewInput : String -> String -> String -> (String -> msg) -> Html msg
 viewInput t p v toMsg =
-    UI.input_ [ type_ t, placeholder p, value v, onInput toMsg, css [ Css.padding (Css.rem 1) ] ] []
+    input [ type_ t, placeholder p, value v, onInput toMsg ] []
 
 
 
@@ -217,3 +218,26 @@ port setAuthTokenCookie : String -> Cmd msg
 subscriptions : Model -> Sub Msg
 subscriptions _ =
     authTokenReceiver GotAuthFromCookie
+
+
+
+-- String util
+
+
+prettyHttpError : Http.Error -> String
+prettyHttpError err =
+    case err of
+        Http.BadUrl url ->
+            "malformed url: " ++ url
+
+        Http.Timeout ->
+            "request timeout"
+
+        Http.NetworkError ->
+            "network error, maybe the server or your internet connection is down"
+
+        Http.BadStatus status ->
+            "status " ++ String.fromInt status ++ ", take a screenshot and show it to BT, he can help with this"
+
+        Http.BadBody errDescription ->
+            "could not decode response body: " ++ errDescription ++ ", take a screenshot and show it to BT, he can help with this"
